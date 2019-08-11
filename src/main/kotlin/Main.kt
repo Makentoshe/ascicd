@@ -1,7 +1,10 @@
+import shell.WindowsShell
+
 fun main(args: Array<String>) {
     val argumentParser = ArgumentParser(Validator())
     val templateAction = TemplateDeployAction(TemplateDeploy())
-    val libAssemblerWrapper = LibShellAction("gradlew assembleDebug", templateAction)
+    val shell = WindowsShell()
+    val libAssemblerWrapper = LibShellAction("gradlew assembleDebug", shell, templateAction)
 
     Main(argumentParser, libAssemblerWrapper).main(args)
 }

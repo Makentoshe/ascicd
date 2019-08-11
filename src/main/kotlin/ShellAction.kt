@@ -1,3 +1,4 @@
+import shell.Shell
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -6,14 +7,6 @@ import java.io.InputStreamReader
  * Contains a command execution result.
  */
 data class ExecutionResult(val exitCode: Int, val output: String, val error: String)
-
-interface Shell {
-    val shell: String
-}
-
-class WindowsShell : Shell {
-    override val shell = "cmd.exe /c "
-}
 
 /**
  * Executes a shell command in Windows
@@ -31,7 +24,7 @@ abstract class ShellAction(
         val executionCommand = shell.shell.plus(command)
         val environmentVariables = getEnvironmentVariables(arguments)
         val workingDirectory = getWorkingDir(arguments)
-        Runtime.getRuntime().exec(executionCommand, environmentVariables, workingDirectory).apply(::process)
+        Runtime.getRuntime().exec(executionCommand, environmentVariables, workingDirectory).let(::process)
     }
 
     protected open fun process(process: Process): ExecutionResult {
@@ -52,7 +45,7 @@ open class LibShellAction(command: String, shell: Shell, action: Action? = null)
 
     override fun process(process: Process): ExecutionResult {
         return super.process(process).apply {
-            print("SAS")
+            println(output)
         }
     }
 }
