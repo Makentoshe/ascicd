@@ -1,12 +1,15 @@
+import logger.KotlinLogger
+import logger.Logger
 import java.io.File
 
-class TemplateDeploy {
+class TemplateDeploy(private val logger: Logger) {
 
     fun deployTemplate(arguments: Arguments) {
         val template = File(javaClass.classLoader.getResource("template")!!.file)
         val destination = File(arguments.project, arguments.project.name)
         if (destination.exists()) destination.deleteRecursively()
         template.copyRecursively(destination, true)
+        logger.info("template was successfully build")
     }
 }
 

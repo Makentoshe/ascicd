@@ -1,3 +1,4 @@
+import logger.Logger
 import shell.Shell
 import java.io.BufferedReader
 import java.io.File
@@ -40,12 +41,13 @@ abstract class ShellAction(
     }
 }
 
-open class LibShellAction(command: String, shell: Shell, action: Action? = null) : ShellAction(command, shell, action) {
+open class LibShellAction(
+    command: String, shell: Shell, action: Action? = null, private val logger: Logger
+) : ShellAction(command, shell, action) {
+
     override fun getWorkingDir(arguments: Arguments) = arguments.lib
 
-    override fun process(process: Process): ExecutionResult {
-        return super.process(process).apply {
-            println(output)
-        }
+    override fun process(process: Process) = super.process(process).also { result ->
+        if (result.exitCode == 0) logger.info("lib was successfully build") else logger.error(result.error)
     }
 }
