@@ -1,24 +1,14 @@
-import logger.KotlinLogger
 import java.io.File
-import java.io.FileNotFoundException
 
-class ArgumentParser(private val validator: Validator, private val logger: KotlinLogger) {
+class ArgumentParser {
 
     fun parse(args: Array<String>): Arguments {
         val project = getProjectPath(args.firstOrNull() ?: "")
-
-        val lib = validator.containsLib(project) ?: throw FileNotFoundException("File lib was not found")
-        val solution = validator.containsSolution(project) ?: throw FileNotFoundException("File solution was not found")
-
-        val description = validator.containsDescription(project)
-        if (description == null) logger.warn("\"description\" was not found")
-
-        val answer = validator.containsAnswer(project)
-        if (answer == null) logger.warn("\"answer\" was not found")
-
-        val template = validator.containsTemplate(project)
-        if (template == null) logger.warn("template was not found and will be build automatically")
-
+        val lib = File(project, "lib")
+        val solution = File(project, "solution")
+        val description = File(project, "description")
+        val answer = File(project, "answer")
+        val template = File(project, project.name)
         return Arguments(project, lib, solution, template, answer, description)
     }
 
