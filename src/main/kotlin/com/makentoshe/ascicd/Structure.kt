@@ -1,6 +1,8 @@
+package com.makentoshe.ascicd
+
 import java.io.File
 
-data class Arguments(
+data class Structure(
     val project: File,
     val lib: File,
     val solution: File,

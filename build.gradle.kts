@@ -2,13 +2,28 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.3.41"
+    id("com.github.johnrengelman.shadow") version "5.1.0"
 }
+
+buildscript {
+    repositories {
+        maven {
+            url = uri("https://plugins.gradle.org/m2/")
+        }
+    }
+    dependencies {
+        classpath("com.github.jengelman.gradle.plugins:shadow:5.1.0")
+    }
+}
+
+apply(plugin = "com.github.johnrengelman.shadow")
 
 group = "makentoshe"
 version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    jcenter()
 }
 
 dependencies {

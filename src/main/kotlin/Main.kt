@@ -1,59 +1,91 @@
-import deploy.CheckerDeploy
-import deploy.ResourceDeploy
-import deploy.TemplateDeploy
-import logger.KotlinLogger
-import shell.WindowsShell
+import com.makentoshe.ascicd.Action
+import com.makentoshe.ascicd.Structure
+import com.makentoshe.ascicd.StructureRepository
+import com.makentoshe.ascicd.copy.CopyAction
+import com.makentoshe.ascicd.copy.CopyCommand
+import com.makentoshe.ascicd.deploy.DeployAction
+import com.makentoshe.ascicd.deploy.DeployCommand
+import com.makentoshe.ascicd.shell.*
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+
+val shell: Shell = WindowsShell
 
 fun main(args: Array<String>) {
-    val resourceDeploy = ResourceDeploy()
-    val shell = WindowsShell()
-    val logger = KotlinLogger()
+    val structure = StructureRepository().get(Unit)
 
-    val argumentParser = try {
-        ArgumentParser()
-    } catch (fnfe: FileNotFoundException) {
-        logger.error(fnfe.localizedMessage)
-        return
+    when (args[0]) {
+        "build" -> Build().execute(structure)
+        else -> println("Nothing to do")
     }
-//
-//    // assemble aar package
-//    val libAssemblerWrapper = LibShellAction("gradlew assembleDebug", shell, null, logger)
-//    // add template to repository
-////    val templateAction = TemplateDeployAction(TemplateDeploy(ResourceDeploy()))
-//
-//    val aarDeliverAction = AarDeliverAction()
-//
-    val deployChecker = CheckerDeployAction(CheckerDeploy(resourceDeploy))
-    val deployTemplate = TemplateDeployAction(TemplateDeploy(resourceDeploy), deployChecker)
-
-    Main(argumentParser, deployTemplate).main(args)
 }
 
-class Main(
-    private val argumentParser: ArgumentParser,
-    private val action: Action
-) {
-    fun main(args: Array<String>) = action.execute(argumentParser.parse(args))
-}
+class Build : Action<Structure> {
 
-class AarDeliverAction(private val action: Action? = null) : Action {
-    override fun execute(arguments: Arguments) {
-        action?.execute(arguments)
-
-        val aarFiles = ArrayList<File>()
-        val checkerFolders = ArrayList<File>()
-
-        val lib = arguments.lib!!
-
-        lib.walkTopDown().forEach { if (it.name == "app-debug.aar") aarFiles.add(it) }
-
-        arguments.project.walkTopDown().forEach {
-            if (it.name == "checker") checkerFolders.add(it)
+    override fun execute(arg: Structure) {
+        val resourceRepository = ResourceRepository(arg)
+        if (!arg.solution.exists() || !arg.lib.exists()) {
+            throw FileNotFoundException("Solution or Checker does not exists")
         }
-        // TODO try to resolve multiple app-debug.aar files
-        val aar = aarFiles[0] ?: return
-        // deliver aar to each checker
+
+        println("Start checker assemble...")
+        ShellAction(shell).execute(ShellCommandAssemble(arg.lib) {
+            if (it.exitCode != 0) println(it.error) else println("Assemble successful")
+        })
+
+        println("Deploy template...")
+        val resource = resourceRepository.get(arg.template)
+        DeployAction().execute(DeployCommand(resource, arg.template))
+
+        val solutionDestination = File(arg.solution, "checker/app-debug.aar")
+        deliverCheckerTo(solutionDestination, arg)
+
+        println("Start connected android tests for solution...")
+        ShellAction(shell).execute(ShellCommand("gradlew cAT", arg.solution) {
+            if (it.exitCode != 0) println(it.error) else println("Tests run successfully")
+        })
+
+        val checkerDestination = File(arg.template, "checker/app-debug.aar")
+        deliverCheckerTo(checkerDestination, arg)
+
+        println("Archive template...")
+        val zipFile = File(arg.project, arg.project.nameWithoutExtension.plus(".zip"))
+        val fileOutputStream = FileOutputStream(zipFile)
+        ZipOutputStream(fileOutputStream).use { zipOutputStream ->
+            arg.project.walkTopDown().forEach { zipOutputStream.writeZipEntry(arg.project, it) }
+        }
+
+        println("Clean project...")
+        clean(arg.lib)
+        clean(arg.solution)
+    }
+
+    private fun deliverCheckerTo(destination: File, structure: Structure) {
+        val aarFile = File(structure.lib, "app/build/outputs/aar/app-debug.aar")
+        CopyAction().execute(CopyCommand(aarFile, destination))
+        println("Checker ${aarFile.canonicalPath} was moved to ${destination.canonicalPath}")
+    }
+
+    private fun ZipOutputStream.writeZipEntry(source: File, file: File) {
+        if (file.isDirectory) return
+        val path = getZipFilePath(source, file)
+        val zipEntry = ZipEntry(path)
+        putNextEntry(zipEntry)
+        write(file.readBytes())
+        closeEntry()
+    }
+
+    private fun getZipFilePath(source: File, file: File): String {
+        return file.absolutePath.replace(source.absolutePath.plus("\\"), "")
+    }
+
+    private fun clean(target: File) {
+        println("Clean checker build...")
+        ShellAction(shell).execute(ShellCommandClean(target) {
+            if (it.exitCode != 0) println(it.error) else println("Clean successful")
+        })
     }
 }

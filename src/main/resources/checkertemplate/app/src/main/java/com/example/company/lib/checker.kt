@@ -25,7 +25,7 @@ open class Checker {
     }
 
     private fun getId(name: String): Int {
-        val activity: Activity = getActivity() ?: return -1
+        val activity = getActivity() ?: return -1
         return activity.resources.getIdentifier(name, "id", activity.packageName)
     }
 
