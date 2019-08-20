@@ -1,3 +1,5 @@
+package com.makentoshe.ascicd
+
 import com.makentoshe.ascicd.Repository
 import com.makentoshe.ascicd.Structure
 import com.makentoshe.ascicd.deploy.CheckerResource

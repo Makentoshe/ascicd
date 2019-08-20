@@ -1,6 +1,5 @@
-import com.makentoshe.ascicd.Action
-import com.makentoshe.ascicd.Structure
-import com.makentoshe.ascicd.StructureRepository
+package com.makentoshe.ascicd
+
 import com.makentoshe.ascicd.copy.CopyAction
 import com.makentoshe.ascicd.copy.CopyCommand
 import com.makentoshe.ascicd.deploy.DeployAction
@@ -12,18 +11,7 @@ import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-val shell: Shell = WindowsShell
-
-fun main(args: Array<String>) {
-    val structure = StructureRepository().get(Unit)
-
-    when (args[0]) {
-        "build" -> Build().execute(structure)
-        else -> println("Nothing to do")
-    }
-}
-
-class Build : Action<Structure> {
+class Build(private val shell: Shell) : Action<Structure> {
 
     override fun execute(arg: Structure) {
         val resourceRepository = ResourceRepository(arg)
@@ -33,7 +21,11 @@ class Build : Action<Structure> {
 
         println("Start checker assemble...")
         ShellAction(shell).execute(ShellCommandAssemble(arg.lib) {
-            if (it.exitCode != 0) println(it.error) else println("Assemble successful")
+            if (it.exitCode != 0) {
+                return@ShellCommandAssemble println(it.error)
+            } else {
+                println("Assemble successful")
+            }
         })
 
         println("Deploy template...")
@@ -45,7 +37,11 @@ class Build : Action<Structure> {
 
         println("Start connected android tests for solution...")
         ShellAction(shell).execute(ShellCommand("gradlew cAT", arg.solution) {
-            if (it.exitCode != 0) println(it.error) else println("Tests run successfully")
+            if (it.exitCode != 0) {
+                return@ShellCommand println(it.error)
+            } else {
+                println("Tests run successfully")
+            }
         })
 
         val checkerDestination = File(arg.template, "checker/app-debug.aar")
@@ -83,7 +79,6 @@ class Build : Action<Structure> {
     }
 
     private fun clean(target: File) {
-        println("Clean checker build...")
         ShellAction(shell).execute(ShellCommandClean(target) {
             if (it.exitCode != 0) println(it.error) else println("Clean successful")
         })
