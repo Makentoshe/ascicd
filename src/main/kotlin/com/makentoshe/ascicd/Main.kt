@@ -9,7 +9,7 @@ fun main(args: Array<String>) {
     val structure = StructureRepository().get(Unit)
 
     when (args[0]) {
-        "build" -> Build(shell).execute(structure)
+        "build" -> Build(shell, structure).execute()
         else -> println("Nothing to do")
     }
 }

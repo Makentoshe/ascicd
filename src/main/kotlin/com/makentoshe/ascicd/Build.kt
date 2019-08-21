@@ -11,52 +11,49 @@ import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-class Build(private val shell: Shell) : Action<Structure> {
+class Build(private val shell: Shell, private val structure: Structure) {
 
-    override fun execute(arg: Structure) {
-        val resourceRepository = ResourceRepository(arg)
-        if (!arg.solution.exists() || !arg.lib.exists()) {
+    fun execute() {
+        val resourceRepository = ResourceRepository(structure)
+        if (!structure.solution.exists() || !structure.lib.exists()) {
             throw FileNotFoundException("Solution or Checker does not exists")
         }
 
         println("Start checker assemble...")
-        ShellAction(shell).execute(ShellCommandAssemble(arg.lib) {
+        ShellAction(shell).execute(ShellCommandAssemble(structure.lib) {
             if (it.exitCode != 0) {
-                return@ShellCommandAssemble println(it.error)
+                throw Exception(it.error)
             } else {
                 println("Assemble successful")
             }
         })
 
         println("Deploy template...")
-        val resource = resourceRepository.get(arg.template)
-        DeployAction().execute(DeployCommand(resource, arg.template))
+        val resource = resourceRepository.get(structure.template)
+        DeployAction().execute(DeployCommand(resource, structure.template))
 
-        val solutionDestination = File(arg.solution, "checker/app-debug.aar")
-        deliverCheckerTo(solutionDestination, arg)
+        val solutionDestination = File(structure.solution, "checker/app-debug.aar")
+        deliverCheckerTo(solutionDestination, structure)
 
         println("Start connected android tests for solution...")
-        ShellAction(shell).execute(ShellCommand("gradlew cAT", arg.solution) {
+        ShellAction(shell).execute(ShellCommand("gradlew cAT", structure.solution) {
             if (it.exitCode != 0) {
-                return@ShellCommand println(it.error)
+                throw Exception(it.error)
             } else {
                 println("Tests run successfully")
             }
         })
 
-        val checkerDestination = File(arg.template, "checker/app-debug.aar")
-        deliverCheckerTo(checkerDestination, arg)
+        val checkerDestination = File(structure.template, "checker/app-debug.aar")
+        deliverCheckerTo(checkerDestination, structure)
 
         println("Archive template...")
-        val zipFile = File(arg.project, arg.project.nameWithoutExtension.plus(".zip"))
+        val zipFile = File(structure.project, structure.project.nameWithoutExtension.plus(".zip"))
         val fileOutputStream = FileOutputStream(zipFile)
         ZipOutputStream(fileOutputStream).use { zipOutputStream ->
-            arg.project.walkTopDown().forEach { zipOutputStream.writeZipEntry(arg.project, it) }
+            structure.project.walkTopDown().forEach { zipOutputStream.writeZipEntry(structure.project, it) }
         }
-
-        println("Clean project...")
-        clean(arg.lib)
-        clean(arg.solution)
+        println("Done")
     }
 
     private fun deliverCheckerTo(destination: File, structure: Structure) {
