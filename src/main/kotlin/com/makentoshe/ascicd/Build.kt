@@ -16,22 +16,23 @@ class Build(private val shell: Shell, private val structure: Structure) {
     fun execute() {
         val resourceRepository = ResourceRepository(structure)
         if (!structure.solution.exists() || !structure.lib.exists()) {
-            throw FileNotFoundException("Solution or Checker does not exists")
+//            throw FileNotFoundException("Solution or Checker does not exists")
         }
 
-        println("Start checker assemble...")
-        ShellAction(shell).execute(ShellCommandAssemble(structure.lib) {
-            if (it.exitCode != 0) {
-                throw Exception(it.error)
-            } else {
-                println("Assemble successful")
-            }
-        })
+//        println("Start checker assemble...")
+//        ShellAction(shell).execute(ShellCommandAssemble(structure.lib) {
+//            if (it.exitCode != 0) {
+//                throw Exception(it.error)
+//            } else {
+//                println("Assemble successful")
+//            }
+//        })
 
         println("Deploy template...")
         val resource = resourceRepository.get(structure.template)
         DeployAction().execute(DeployCommand(resource, structure.template))
 
+        return
         val solutionDestination = File(structure.solution, "checker/app-debug.aar")
         deliverCheckerTo(solutionDestination, structure)
 

@@ -1,5 +1,4 @@
 package com.makentoshe.ascicd
-
 import com.makentoshe.ascicd.shell.Shell
 import com.makentoshe.ascicd.shell.WindowsShell
 

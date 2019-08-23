@@ -17,9 +17,11 @@ class DeployAction : Action<DeployCommand> {
         val iterator = it.entries().iterator()
         while (iterator.hasNext()) {
             val element = iterator.next()
-            if (element.name.contains("$path/") && element.size > 0) {
+            if (element.name.contains("$path/") && !element.isDirectory) {
                 val currentFile = File("").absoluteFile
-                val filePath = currentFile.name.plus("\\").plus(element.name.replace("$path/", ""))
+                var filePath = currentFile.name.plus("\\").plus(element.name.replace("$path/", ""))
+                // Resources could not contains files with jar extension
+                if (filePath.contains(".jar_")) filePath = filePath.replace(".jar_", ".jar")
                 val file = File(currentFile, filePath).apply { mkfiles() }
                 it.getInputStream(element).transferTo(file.outputStream())
             }
