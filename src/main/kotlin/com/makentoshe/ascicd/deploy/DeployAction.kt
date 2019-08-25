@@ -2,6 +2,7 @@ package com.makentoshe.ascicd.deploy
 
 import com.makentoshe.ascicd.Action
 import java.io.File
+import java.util.jar.JarEntry
 import java.util.jar.JarFile
 
 class DeployAction : Action<DeployCommand> {
@@ -10,22 +11,27 @@ class DeployAction : Action<DeployCommand> {
         if (arg.target.exists()) arg.target.deleteRecursively()
         val path = arg.resource.title
         val jarFile = File(javaClass.protectionDomain.codeSource.location.path);
-        if (jarFile.isFile) executeJar(jarFile, path) else executeIde(arg.target, path)
+        if (jarFile.isFile) executeJar(jarFile, arg) else executeIde(arg.target, path)
     }
 
-    private fun executeJar(jarFile: File, path: String) = JarFile(jarFile).use {
+    private fun executeJar(jarFile: File, command: DeployCommand) = JarFile(jarFile).use {
+        val pathToResource = command.resource.title
+
         val iterator = it.entries().iterator()
         while (iterator.hasNext()) {
             val element = iterator.next()
-            if (element.name.contains("$path/") && !element.isDirectory) {
-                val currentFile = File("").absoluteFile
-                var filePath = currentFile.name.plus("\\").plus(element.name.replace("$path/", ""))
-                // Resources could not contains files with jar extension
-                if (filePath.contains(".jar_")) filePath = filePath.replace(".jar_", ".jar")
-                val file = File(currentFile, filePath).apply { mkfiles() }
+            if (element.name.contains("$pathToResource/") && !element.isDirectory) {
+                val file = element.makeFilePath(pathToResource, command.target.name).let(::File).apply { mkfiles() }
                 it.getInputStream(element).transferTo(file.outputStream())
             }
         }
+    }
+
+    private fun JarEntry.makeFilePath(pathToResource: String, parentTitle: String): String {
+        var filePath = name.replace("$pathToResource/", "")
+        // Resources could not contains files with jar extension
+        if (filePath.contains(".jar_")) filePath = filePath.replace(".jar_", ".jar")
+        return parentTitle.plus("\\").plus(filePath)
     }
 
     private fun File.mkfiles() {

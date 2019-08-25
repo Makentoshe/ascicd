@@ -11,28 +11,27 @@ import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-class Build(private val shell: Shell, private val structure: Structure) {
+class Build(private val shell: Shell, private val structure: Structure): Action<Array<String>> {
 
-    fun execute() {
+    override fun execute(arg: Array<String>) {
         val resourceRepository = ResourceRepository(structure)
         if (!structure.solution.exists() || !structure.lib.exists()) {
-//            throw FileNotFoundException("Solution or Checker does not exists")
+            throw FileNotFoundException("Solution or Checker does not exists")
         }
 
-//        println("Start checker assemble...")
-//        ShellAction(shell).execute(ShellCommandAssemble(structure.lib) {
-//            if (it.exitCode != 0) {
-//                throw Exception(it.error)
-//            } else {
-//                println("Assemble successful")
-//            }
-//        })
+        println("Start checker assemble...")
+        ShellAction(shell).execute(ShellCommandAssemble(structure.lib) {
+            if (it.exitCode != 0) {
+                throw Exception(it.error)
+            } else {
+                println("Assemble successful")
+            }
+        })
 
         println("Deploy template...")
         val resource = resourceRepository.get(structure.template)
         DeployAction().execute(DeployCommand(resource, structure.template))
 
-        return
         val solutionDestination = File(structure.solution, "checker/app-debug.aar")
         deliverCheckerTo(solutionDestination, structure)
 
@@ -74,11 +73,5 @@ class Build(private val shell: Shell, private val structure: Structure) {
 
     private fun getZipFilePath(source: File, file: File): String {
         return file.absolutePath.replace(source.absolutePath.plus("\\"), "")
-    }
-
-    private fun clean(target: File) {
-        ShellAction(shell).execute(ShellCommandClean(target) {
-            if (it.exitCode != 0) println(it.error) else println("Clean successful")
-        })
     }
 }
